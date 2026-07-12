@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            
+			background: linear-gradient(260deg, #e3e3e3 0%, #1b3b6c 0%, #000000 150%);
+            min-height: 100vh;
+            overflow: hidden;
+            color: #e0e0e0;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: rgba(10, 10, 15, 0.25);
+            backdrop-filter: blur(1px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Control Panel */
+        .control-panel {
+            position: fixed;
+            top: 80px;
+            right: 0;
+            width: 300px;
+            max-height: calc(100vh - 100px);
+            background: rgb(15 15 25 / 36%);;
+            backdrop-filter: blur(20px);
+            border-radius: 16px 0 0 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-right: none;
+            z-index: 50;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+        }
+
+        .control-panel.collapsed {
+            transform: translateX(280px);
+        }
+
+        .panel-toggle {
+            position: absolute;
+            left: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 27px;
+            height: 80px;
+            background: rgb(5, 134, 159);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-right: none;
+            border-radius: 12px 0 0 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .panel-toggle:hover {
+            background: rgba(25, 25, 40, 0.95);
+        }
+
+        .panel-toggle svg {
+            width: 30px;
+            height: 30px;
+            fill: #00d4ff;
+            transition: transform 0.3s ease;
+        }
+
+        .control-panel.collapsed .panel-toggle svg {
+            transform: rotate(180deg);
+        }
+
+        .panel-content {
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(100vh - 120px);
+        }
+
+        .section {
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #00d4ff;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 16px;
+            border-radius: 10px;
+            color: #e0e0e0;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: rgba(0, 212, 255, 0.15);
+            border-color: rgba(0, 212, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn.primary {
+            background: linear-gradient(135deg, #00d4ff 0%, #00a8cc 100%);
+            color: #000;
+            font-weight: 600;
+            border: none;
+        }
+
+        .btn.primary:hover {
+            box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4);
+        }
+
+        .btn.full-width {
+            grid-column: 1 / -1;
+        }
+
+        /* Sliders */
+        .slider-container {
+            margin-bottom: 16px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+
+        .slider-value {
+            color: #00ff88;
+            font-weight: 600;
+            font-family: 'Consolas', monospace;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00d4ff, #00ff88);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        input[type="range"]:disabled {
+            opacity: 0.4;
+        }
+
+        input[type="range"]:disabled::-webkit-slider-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            cursor: not-allowed;
+        }
+
+        /* Toggle Switch */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+        }
+
+        .toggle-label {
+            font-size: 0.9rem;
+        }
+
+        .toggle {
+            position: relative;
+            width: 50px;
+            height: 26px;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 26px;
+            transition: 0.3s;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        .toggle input:checked + .toggle-slider {
+            background: linear-gradient(135deg, #00d4ff, #00ff88);
+        }
+
+        .toggle input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+
+        /* Status Bar */
+        .status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: rgba(10, 10, 15, 0.25);
+            backdrop-filter: blur(1px);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            font-size: 0.8rem;
+            color: #888;
+            z-index: 100;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 24px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00ff88;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Background Particles */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="bg-canvas"></canvas>
+    <div id="canvas-container"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">Куб</div>
+    </header>
+
+    <!-- Control Panel -->
+    <div class="control-panel" id="control-panel">
+        <div class="panel-toggle" id="panel-toggle">
+            <svg viewBox="0 0 24 24">
+                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+            </svg>
+        </div>
+        <div class="panel-content">
+            <!-- Camera Controls -->
+            <div class="section">
+                <div class="section-title">Управление камерой</div>
+                <div class="btn-group">
+                    <button class="btn" id="zoom-in">Приблизить</button>
+                    <button class="btn" id="zoom-out">Отдалить</button>
+                    <button class="btn" id="rotate-left">Поворот влево</button>
+                    <button class="btn" id="rotate-right">Поворот вправо</button>
+                    <button class="btn primary full-width" id="reset-view">Сброс вида</button>
+                </div>
+            </div>
+
+            <!-- Rotation Controls -->
+            <div class="section">
+                <div class="section-title">Ручной поворот</div>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Ось X</span>
+                        <span class="slider-value" id="rot-x-val">0°</span>
+                    </div>
+                    <input type="range" id="rot-x" min="-180" max="180" value="0">
+                </div>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Ось Y</span>
+                        <span class="slider-value" id="rot-y-val">0°</span>
+                    </div>
+                    <input type="range" id="rot-y" min="-180" max="180" value="0">
+                </div>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Ось Z</span>
+                        <span class="slider-value" id="rot-z-val">0°</span>
+                    </div>
+                    <input type="range" id="rot-z" min="-180" max="180" value="0">
+                </div>
+            </div>
+
+            <!-- Slicing -->
+            <div class="section">
+                <div class="section-title">Сечение (Слайсинг)</div>
+                <div class="toggle-container">
+                    <span class="toggle-label">Включить сечение</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="enable-clipping">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Плоскость X</span>
+                        <span class="slider-value" id="slice-x-val">50%</span>
+                    </div>
+                    <input type="range" id="slice-x" min="0" max="100" value="50" disabled>
+                </div>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Плоскость Y</span>
+                        <span class="slider-value" id="slice-y-val">50%</span>
+                    </div>
+                    <input type="range" id="slice-y" min="0" max="100" value="50" disabled>
+                </div>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Плоскость Z</span>
+                        <span class="slider-value" id="slice-z-val">50%</span>
+                    </div>
+                    <input type="range" id="slice-z" min="0" max="100" value="50" disabled>
+                </div>
+                <div class="btn-group">
+                    <button class="btn slice-preset" data-percent="30">30%</button>
+                    <button class="btn slice-preset" data-percent="50">50%</button>
+                    <button class="btn slice-preset" data-percent="70">70%</button>
+                </div>
+            </div>
+
+            <!-- Display Options -->
+            <div class="section">
+                <div class="section-title">Отображение</div>
+                <div class="toggle-container">
+                    <span class="toggle-label">Каркас</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="toggle-wireframe">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="toggle-container">
+                    <span class="toggle-label">Автовращение</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="toggle-autorotate">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <div class="status-item">
+            <div class="status-dot"></div>
+            <span>Готов</span>
+        </div>
+        <div class="status-item">
+            <span>Модель: <span id="model-name">Куб</span></span>
+        </div>
+        <div class="status-item">
+            <span>Вершины: <span id="vertex-count">8</span></span>
+        </div>
+        <div class="status-item">
+            <span>Треугольники: <span id="face-count">12</span></span>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Global variables
+        let scene, camera, renderer, controls;
+        let currentModel = null;
+        let modelBoundingBox = new THREE.Box3();
+        let clippingPlanes = [];
+        let clippingEnabled = false;
+        let autoRotate = false;
+        let backgroundParticles = [];
+
+        // DOM Elements
+        const container = document.getElementById('canvas-container');
+        const bgCanvas = document.getElementById('bg-canvas');
+        const bgCtx = bgCanvas.getContext('2d');
+        const panel = document.getElementById('control-panel');
+        const panelToggle = document.getElementById('panel-toggle');
+
+        // Initialize
+        init();
+        animate();
+
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.set(5, 5, 5);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.localClippingEnabled = true;
+            container.appendChild(renderer.domElement);
+
+            // Background gradient
+            const bgTexture = createGradientTexture();
+            scene.background = bgTexture;
+
+            // Lights
+            setupLights();
+
+            // Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.08;
+            controls.minDistance = 1;
+            controls.maxDistance = 100;
+
+            // Clipping planes
+            clippingPlanes = [
+                new THREE.Plane(new THREE.Vector3(1, 0, 0), 0),
+                new THREE.Plane(new THREE.Vector3(0, 1, 0), 0),
+                new THREE.Plane(new THREE.Vector3(0, 0, 1), 0)
+            ];
+
+            // Create default cube
+            createDefaultCube();
+
+            // Setup background particles
+            setupBackgroundParticles();
+
+            // Event listeners
+            setupEventListeners();
+
+            // Handle resize
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function createGradientTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 4411;
+            canvas.height = 4411;
+            const ctx = canvas.getContext('2d');
+            
+            const gradient = ctx.createLinearGradient(122, 122, 122, 512);
+            gradient.addColorStop(0, '#0a0a12');
+            gradient.addColorStop(0.5, '#151525');
+            gradient.addColorStop(1, '#1a1a30');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(222, 222, 222, 1);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+            return texture;
+        }
+
+        function setupLights() {
+            // Ambient
+            const ambient = new THREE.AmbientLight(0xffffff, 3);
+            scene.add(ambient);
+
+            // Main directional
+            const mainLight = new THREE.DirectionalLight(0xffffff, 2);
+            mainLight.position.set(10, 20, 15);
+            mainLight.castShadow = true;
+            mainLight.shadow.mapSize.width = 2048;
+            mainLight.shadow.mapSize.height = 2048;
+            scene.add(mainLight);
+
+            // Fill lights
+            const fillLight1 = new THREE.DirectionalLight(0xa3a3a3, 0.1);
+            fillLight1.position.set(-10, 5, -10);
+            scene.add(fillLight1);
+
+            const fillLight2 = new THREE.DirectionalLight(0xffffff, 0.1);
+            fillLight2.position.set(10, -5, -10);
+            scene.add(fillLight2);
+
+            // Rim light
+            const rimLight = new THREE.DirectionalLight(0xffffff, 0.2);
+            rimLight.position.set(0, -10, 10);
+            scene.add(rimLight);
+        }
+
+        function createDefaultCube() {
+            const geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+            
+            // Светлый цвет
+            const material = new THREE.MeshPhongMaterial({
+                color: 0xCCAC00,
+                specular: 0xffffff,
+                shininess: 90,
+                side: THREE.DoubleSide,
+                clippingPlanes: null
+            });
+
+            currentModel = new THREE.Mesh(geometry, material);
+            currentModel.castShadow = true;
+            currentModel.receiveShadow = true;
+            scene.add(currentModel);
+
+            updateModelInfo('Куб', 8, 12);
+            fitCameraToModel();
+        }
+
+        function setupBackgroundParticles() {
+            bgCanvas.width = window.innerWidth;
+            bgCanvas.height = window.innerHeight;
+
+            for (let i = 0; i < 80; i++) {
+                backgroundParticles.push({
+                    x: Math.random() * bgCanvas.width,
+                    y: Math.random() * bgCanvas.height,
+                    vx: (Math.random() - 0.5) * 0.3,
+                    vy: (Math.random() - 0.5) * 0.3,
+                    radius: Math.random() * 2 + 0.5,
+                    alpha: Math.random() * 0.1 + 0.2
+                });
+            }
+        }
+
+        function drawBackgroundParticles() {
+            bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+
+            backgroundParticles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+
+                if (p.x < 0) p.x = bgCanvas.width;
+                if (p.x > bgCanvas.width) p.x = 0;
+                if (p.y < 0) p.y = bgCanvas.height;
+                if (p.y > bgCanvas.height) p.y = 0;
+
+                bgCtx.beginPath();
+                bgCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                bgCtx.fillStyle = `rgba(0, 212, 255, ${p.alpha})`;
+                bgCtx.fill();
+            });
+
+            // Draw connections
+            backgroundParticles.forEach((p1, i) => {
+                backgroundParticles.slice(i + 1).forEach(p2 => {
+                    const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+                    if (dist < 100) {
+                        bgCtx.beginPath();
+                        bgCtx.moveTo(p1.x, p1.y);
+                        bgCtx.lineTo(p2.x, p2.y);
+                        bgCtx.strokeStyle = `rgba(0, 212, 255, ${0.1 * (1 - dist / 100)})`;
+                        bgCtx.stroke();
+                    }
+                });
+            });
+        }
+
+        function setupEventListeners() {
+            // Panel toggle
+            panelToggle.addEventListener('click', () => {
+                panel.classList.toggle('collapsed');
+            });
+
+            // Zoom buttons
+            document.getElementById('zoom-in').addEventListener('click', () => {
+                camera.position.multiplyScalar(0.8);
+            });
+
+            document.getElementById('zoom-out').addEventListener('click', () => {
+                camera.position.multiplyScalar(1.2);
+            });
+
+            // Rotation buttons (90 degrees)
+            document.getElementById('rotate-left').addEventListener('click', () => {
+                if (currentModel) {
+                    animateRotation(currentModel.rotation.y, currentModel.rotation.y + Math.PI / 2, 'y');
+                }
+            });
+
+            document.getElementById('rotate-right').addEventListener('click', () => {
+                if (currentModel) {
+                    animateRotation(currentModel.rotation.y, currentModel.rotation.y - Math.PI / 2, 'y');
+                }
+            });
+
+            // Reset view
+            document.getElementById('reset-view').addEventListener('click', resetView);
+
+            // Manual rotation sliders
+            ['x', 'y', 'z'].forEach(axis => {
+                document.getElementById(`rot-${axis}`).addEventListener('input', (e) => {
+                    if (currentModel) {
+                        currentModel.rotation[axis] = THREE.MathUtils.degToRad(parseFloat(e.target.value));
+                        document.getElementById(`rot-${axis}-val`).textContent = e.target.value + '°';
+                    }
+                });
+            });
+
+            // Clipping toggle
+            document.getElementById('enable-clipping').addEventListener('change', (e) => {
+                clippingEnabled = e.target.checked;
+                const sliders = ['slice-x', 'slice-y', 'slice-z'];
+                sliders.forEach(id => {
+                    document.getElementById(id).disabled = !clippingEnabled;
+                });
+
+                if (currentModel && currentModel.material) {
+                    const materials = Array.isArray(currentModel.material) ? currentModel.material : [currentModel.material];
+                    materials.forEach(mat => {
+                        mat.clippingPlanes = clippingEnabled ? clippingPlanes : null;
+                        mat.needsUpdate = true;
+                    });
+                }
+            });
+
+            // Slicing sliders
+            ['x', 'y', 'z'].forEach((axis, index) => {
+                document.getElementById(`slice-${axis}`).addEventListener('input', (e) => {
+                    const percent = parseFloat(e.target.value) / 99;
+                    document.getElementById(`slice-${axis}-val`).textContent = e.target.value + '%';
+                    updateClippingPlane(index, axis, percent);
+                });
+            });
+
+            // Slice presets
+            document.querySelectorAll('.slice-preset').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    if (!clippingEnabled) return;
+                    const percent = e.target.dataset.percent;
+                    ['x', 'y', 'z'].forEach((axis, index) => {
+                        document.getElementById(`slice-${axis}`).value = percent;
+                        document.getElementById(`slice-${axis}-val`).textContent = percent + '%';
+                        updateClippingPlane(index, axis, percent / 100);
+                    });
+                });
+            });
+
+            // Wireframe toggle
+            document.getElementById('toggle-wireframe').addEventListener('change', (e) => {
+                if (currentModel && currentModel.material) {
+                    const materials = Array.isArray(currentModel.material) ? currentModel.material : [currentModel.material];
+                    materials.forEach(mat => {
+                        mat.wireframe = e.target.checked;
+                    });
+                }
+            });
+
+            // Auto-rotate toggle
+            document.getElementById('toggle-autorotate').addEventListener('change', (e) => {
+                autoRotate = e.target.checked;
+            });
+        }
+
+        function animateRotation(from, to, axis) {
+            const duration = 500;
+            const startTime = performance.now();
+
+            function updateRotation(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3); // ease-out
+
+                if (currentModel) {
+                    currentModel.rotation[axis] = from + (to - from) * eased;
+                }
+
+                if (progress < 1) {
+                    requestAnimationFrame(updateRotation);
+                }
+            }
+
+            requestAnimationFrame(updateRotation);
+        }
+
+        function updateClippingPlane(index, axis, percent) {
+            if (!currentModel) return;
+            
+            // Fixing z-fighting (flickering)
+            if (percent == 0) percent = -0.001;
+            if (percent == 1) percent = 1.001;
+            
+            modelBoundingBox.setFromObject(currentModel);
+            const center = new THREE.Vector3();
+            modelBoundingBox.getCenter(center);
+            const size = new THREE.Vector3();
+            modelBoundingBox.getSize(size);
+
+            const axisIndex = { x: 0, y: 1, z: 2 }[axis];
+            const dimension = size.getComponent(axisIndex);
+            const offset = (percent - 0.5) * dimension;
+
+            clippingPlanes[index].normal.set(0, 0, 0);
+            clippingPlanes[index].normal.setComponent(axisIndex, 1);
+            clippingPlanes[index].constant = -offset - center.getComponent(axisIndex);
+        }
+
+        function updateModelInfo(name, vertices, faces) {
+            document.getElementById('model-name').textContent = name;
+            document.getElementById('vertex-count').textContent = vertices;
+            document.getElementById('face-count').textContent = faces;
+        }
+
+        function fitCameraToModel() {
+            if (!currentModel) return;
+
+            modelBoundingBox.setFromObject(currentModel);
+            const center = new THREE.Vector3();
+            modelBoundingBox.getCenter(center);
+            const size = new THREE.Vector3();
+            modelBoundingBox.getSize(size);
+
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const fov = camera.fov * (Math.PI / 180);
+            let cameraDistance = maxDim / (2 * Math.tan(fov / 2));
+
+            // Add 40% padding
+            cameraDistance *= 1.4;
+
+            const direction = camera.position.clone().normalize();
+            camera.position.copy(direction.multiplyScalar(cameraDistance));
+            controls.target.copy(center);
+            controls.update();
+        }
+
+        function resetView() {
+            if (currentModel) {
+                currentModel.rotation.set(0, 0, 0);
+                ['x', 'y', 'z'].forEach(axis => {
+                    document.getElementById(`rot-${axis}`).value = 0;
+                    document.getElementById(`rot-${axis}-val`).textContent = '0°';
+                });
+            }
+            camera.position.set(5, 5, 5);
+            controls.target.set(0, 0, 0);
+            fitCameraToModel();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            bgCanvas.width = window.innerWidth;
+            bgCanvas.height = window.innerHeight;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            controls.update();
+
+            if (autoRotate && currentModel) {
+                currentModel.rotation.y += 0.005;
+            }
+
+            drawBackgroundParticles();
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
